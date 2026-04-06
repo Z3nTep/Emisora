@@ -1,4 +1,0 @@
-2026/03/23-19:07:41.888 c5 Reusing MANIFEST /headless/.config/obs-studio/plugin_config/obs-browser/Local Storage/leveldb/MANIFEST-000001
-2026/03/23-19:07:41.943 c5 Recovering log #4
-2026/03/23-19:07:41.945 c5 (ignoring error) /headless/.config/obs-studio/plugin_config/obs-browser/Local Storage/leveldb/000004.log: dropping 5468 bytes; Corruption: checksum mismatch
-2026/03/23-19:07:41.951 c5 Reusing old log /headless/.config/obs-studio/plugin_config/obs-browser/Local Storage/leveldb/000004.log 

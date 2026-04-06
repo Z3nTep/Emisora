@@ -1,8 +1,10 @@
 # Ignorar todo el contenido de la carpeta de medios
 media/musica/*
 media/videos/*
+emision/obs-conf/*
 
 # Pero permitir que se suba el archivo .gitkeep para que la carpeta exista en GitHub
 !media/musica/.gitkeep
 !media/videos/.gitkeep
 
+!emision/obs-conf/.gitkeep
