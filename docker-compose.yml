@@ -1,0 +1,37 @@
+services:
+  wordpress1-db:
+    image: mariadb:10
+    environment:
+      - MYSQL_ROOT_PASSWORD=pass1
+      - MYSQL_DATABASE=wordpress
+      - MYSQL_USER=wpuser
+      - MYSQL_PASSWORD=wppass
+    volumes:
+      - ./wp1/db_data:/var/lib/mysql
+    networks:
+      - emisora_web_db
+    restart: unless-stopped
+
+  web_emisora1:
+    image: wordpress:latest
+    depends_on:
+      - wordpress1-db
+    environment:
+      - WORDPRESS_DB_HOST=wordpress1-db:3306
+      - WORDPRESS_DB_USER=wpuser
+      - WORDPRESS_DB_PASSWORD=wppass
+      - WORDPRESS_DB_NAME=wordpress
+      - WORDPRESS_CONFIG_EXTRA=define('WP_HOME', 'https://z3nwary.com'); define('WP_SITEURL', 'https://z3nwary.com');
+    volumes:
+      - ./wp1/wp_data:/var/www/html
+      - ./uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
+    networks:
+      - z3nweb
+      - emisora_web_db
+    restart: unless-stopped
+
+networks:
+  z3nweb:
+    external: true
+  emisora_web_db:
+    internal: true
