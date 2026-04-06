@@ -1,0 +1,10 @@
+# Configuración local (se genera automáticamente)
+radio_config.json
+
+# Música (cada usuario tendrá la suya)
+musica/
+
+# Sistema
+node_modules/
+.DS_Store
+Thumbs.db

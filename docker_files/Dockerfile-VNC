@@ -1,0 +1,97 @@
+FROM ubuntu:24.04
+
+# Entorno: Ubuntu 24.04 con XFCE, VNC y OBS (Estilo consolidado para mayor claridad)
+ENV DEBIAN_FRONTEND=noninteractive \
+    TERM=xterm \
+    DISPLAY=:1 \
+    VNC_PORT=5901 \
+    NO_VNC_PORT=6080 \
+    VNC_COL_DEPTH=24 \
+    VNC_RESOLUTION=1520x1020 \
+    HOME=/headless \
+    STARTUPDIR=/dockerstartup
+
+WORKDIR $HOME
+
+# 1. Instalación de dependencias del sistema, entorno gráfico (mínimo) y VNC
+# Se usa --no-install-recommends para evitar paquetes innecesarios (bloat)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    xfce4-panel \
+    xfce4-session \
+    xfdesktop4 \
+    xfwm4 \
+    tigervnc-standalone-server \
+    tigervnc-common \
+    tigervnc-tools \
+    novnc \
+    websockify \
+    dbus-x11 \
+    sudo \
+    x11-utils \
+    xauth \
+    locales \
+    bzip2 \
+    ca-certificates \
+    fonts-liberation \
+    libvlc5 \
+    vlc-plugin-base \
+    libappindicator3-1 \
+    gir1.2-appindicator3-0.1 \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Hardening: noVNC index.html (evitar listado de directorios)
+RUN ln -s /usr/share/novnc/vnc_lite.html /usr/share/novnc/index.html
+
+# 2. Configurar locales
+RUN locale-gen en_US.UTF-8
+ENV LANG=en_US.UTF-8 \
+    LANGUAGE=en_US:en \
+    LC_ALL=en_US.UTF-8
+
+# 3. Instalación de OBS Studio (PPA Oficial) y Entorno Python (Controlador Nativo)
+RUN apt-get update && apt-get install -y --no-install-recommends software-properties-common curl gnupg && \
+    add-apt-repository -y ppa:obsproject/obs-studio && \
+    apt-get update && apt-get install -y --no-install-recommends \
+    obs-studio \
+    python3 \
+    python3-tk \
+    python3-pip \
+    python3-venv && \
+    # Instalar librerías de Python globalmente en Docker para OBS Websocket y gestión MP3
+    pip3 install --break-system-packages obsws-python mutagen pystray Pillow && \
+    # Limpiar herramientas de construcción y temporales para reducir tamaño de imagen
+    apt-get purge -y software-properties-common curl gnupg && \
+    apt-get autoremove -y && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# 5. Gestión de usuario y permisos (UID 1000 y GID 0 para compatibilidad)
+RUN userdel -r ubuntu || true && \
+    useradd -m -u 1000 -g 0 -s /bin/bash -d $HOME vncuser && \
+    echo "vncuser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# 6. Configuración de arrranque para el escritorio XFCE (xstartup)
+RUN mkdir -p $HOME/.vnc && \
+    echo "#!/bin/bash\n\
+xrdb \$HOME/.Xresources\n\
+vncconfig -iconic &\n\
+dbus-launch --exit-with-session startxfce4" > $HOME/.vnc/xstartup && \
+    chmod +x $HOME/.vnc/xstartup
+
+# 7. Copiar aplicación de automatización multimedia y script de inicio
+RUN mkdir -p /app
+COPY app/auto_media_player /app
+
+RUN mkdir -p $STARTUPDIR
+COPY docker_files/start-with-radio.sh $STARTUPDIR/vnc_startup.sh
+RUN sed -i 's/\r$//' $STARTUPDIR/vnc_startup.sh && \
+    chmod +x $STARTUPDIR/vnc_startup.sh
+
+# 8. Sincronización de permisos y carpetas necesarias para OBS
+RUN mkdir -p $HOME/.config/obs-studio/basic/scenes && \
+    chown -R 1000:0 $HOME $STARTUPDIR && \
+    chmod -R 775 $HOME $STARTUPDIR
+
+USER 1000
+EXPOSE $VNC_PORT $NO_VNC_PORT
+
+ENTRYPOINT ["/dockerstartup/vnc_startup.sh"]

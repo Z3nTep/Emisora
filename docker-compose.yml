@@ -1,0 +1,75 @@
+services:
+  # ==========================================
+  # 1. OBS Studio (VNC Desktop)
+  # ==========================================
+  vnc-desktop:
+    build:
+      context: .
+      dockerfile: docker_files/Dockerfile-VNC # Asegúrate de que esta ruta local coincida si moviste el Dockerfile
+    container_name: stream-obs
+    volumes:
+      # Directorio de la app de automatización multimedia
+      - ./app/auto_media_player:/app
+      
+      # Directorio Base de OBS (Debe ser escribible para cachés de Chromium y carpetas temporales)
+      - ./emision/obs-conf:/headless/.config/obs-studio
+      
+      ## 🛡️ MODO INMORTAL: Bóveda de Solo Lectura 
+      ## (DESCOMENTAR estas líneas de abajo SOLAMENTE cuando ya hayas configurado tu stream en VNC por primera vez)
+      # - type: bind
+      #   source: ./emision/obs-conf/global.ini
+      #   target: /headless/.config/obs-studio/global.ini
+      #   read_only: true
+      # - type: bind
+      #   source: ./emision/obs-conf/basic
+      #   target: /headless/.config/obs-studio/basic
+      #   read_only: true
+      
+      # Videos para el fondo (solo lectura)
+      - type: bind
+        source: ./media/videos
+        target: /headless/Videos
+        read_only: true
+      # Medios (Único punto de montaje para OBS y la radio)
+      - type: bind
+        source: ./media/musica
+        target: /headless/Music
+        read_only: true
+    ports:
+      # - "5901:5901" # VNC port
+      - "6901:6080" # noVNC web port (mapeado al 6080 interno)
+    environment:
+      - USER=vncuser
+      - HOME=/headless
+      - VNC_PW=vncpass
+      - VNC_RESOLUTION=1280x720
+      - AUTO_STREAM=false
+      - AUTO_PLAY_RADIO=true
+    restart: unless-stopped
+    networks:
+      - stream-net
+
+  # ==========================================
+  # 2. Servidor Samba (Almacenamiento en red)
+  # ==========================================
+  samba:
+    image: dockurr/samba:latest
+    container_name: stream-storage
+    environment:
+      NAME: "Media"
+      USER: "Z3nStorage"
+      PASS: "Z3nWasDropOut"
+    ports:
+      - "445:445"
+    volumes:
+      - ./media:/storage
+    restart: always
+    networks:
+      - stream-net
+
+# ==========================================
+# Redes
+# ==========================================
+networks:
+  stream-net:
+    driver: bridge
