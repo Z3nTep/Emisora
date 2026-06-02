@@ -37,6 +37,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     vlc-plugin-base \
     libappindicator3-1 \
     gir1.2-appindicator3-0.1 \
+    xvfb \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Hardening: noVNC index.html (evitar listado de directorios)
@@ -67,6 +68,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends software-proper
     apt-get autoremove -y && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# 4. Instalación de Fuentes Personalizadas
+RUN apt-get update && apt-get install -y --no-install-recommends wget fontconfig && \
+    wget -qO /tmp/MedievalSharp.ttf https://github.com/google/fonts/raw/main/ofl/medievalsharp/MedievalSharp.ttf && \
+    mkdir -p /usr/share/fonts/truetype/custom && \
+    mv /tmp/MedievalSharp.ttf /usr/share/fonts/truetype/custom/ && \
+    fc-cache -fv && \
+    apt-get purge -y wget && \
+    apt-get autoremove -y && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
 # 5. Gestión de usuario y permisos (UID 1000 y GID 0 para compatibilidad)
 RUN userdel -r ubuntu || true && \
     useradd -m -u 1000 -g 0 -s /bin/bash -d $HOME vncuser && \
@@ -81,11 +92,13 @@ dbus-launch --exit-with-session startxfce4" > $HOME/.vnc/xstartup && \
     chmod +x $HOME/.vnc/xstartup
 
 # 7. Copiar aplicación de automatización multimedia y script de inicio
-RUN mkdir -p /app
-COPY app/auto_media_player /app
+RUN mkdir -p /app/app_obs /app/shared /widget_player
+COPY app/app_obs /app/app_obs
+COPY app/shared /app/shared
+COPY app/widget_player /widget_player
 
 RUN mkdir -p $STARTUPDIR
-COPY docker_files/start-with-radio.sh $STARTUPDIR/vnc_startup.sh
+COPY docker_files/vnc/start-with-radio.sh $STARTUPDIR/vnc_startup.sh
 RUN sed -i 's/\r$//' $STARTUPDIR/vnc_startup.sh && \
     chmod +x $STARTUPDIR/vnc_startup.sh
 

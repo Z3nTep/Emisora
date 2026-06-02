@@ -1,10 +1,18 @@
-# Ignorar todo el contenido de la carpeta de medios
+# Ignorar todo el contenido de los directorios
 media/musica/*
 media/videos/*
-emision/obs-conf/*
+media/imagenes/*
 
-# Pero permitir que se suba el archivo .gitkeep para que la carpeta exista en GitHub
+emision/obs-conf/*
+emision/restreamer/*
+
+# Datos dinámicos generados por la app
+app/widget_player/now_playing.json
+
+# Para mantener la estructura
 !media/musica/.gitkeep
 !media/videos/.gitkeep
+!media/imagenes/.gitkeep
 
 !emision/obs-conf/.gitkeep
+!emision/restreamer/.gitkeep

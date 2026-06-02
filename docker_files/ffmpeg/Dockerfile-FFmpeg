@@ -1,0 +1,36 @@
+FROM ubuntu:24.04
+
+# Configurar entorno no interactivo y locales
+ENV DEBIAN_FRONTEND=noninteractive \
+    LANG=en_US.UTF-8 \
+    LANGUAGE=en_US:en \
+    LC_ALL=en_US.UTF-8
+
+# Instalar dependencias base, FFmpeg, Liquidsoap y Python
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    locales \
+    ffmpeg \
+    liquidsoap \
+    python3 \
+    python3-pip \
+    wget \
+    fontconfig \
+    ca-certificates \
+    && locale-gen en_US.UTF-8 \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Descargar e instalar fuente MedievalSharp
+RUN mkdir -p /usr/share/fonts/truetype/custom && \
+    wget --no-check-certificate -O /usr/share/fonts/truetype/custom/MedievalSharp.ttf "https://raw.githubusercontent.com/google/fonts/main/ofl/medievalsharp/MedievalSharp.ttf" && \
+    fc-cache -fv
+
+# Copiar aplicación de automatización
+RUN mkdir -p /app/app_ffmpeg /app/shared
+COPY app/app_ffmpeg /app/app_ffmpeg
+COPY app/shared /app/shared
+
+# Directorio de trabajo
+WORKDIR /app/app_ffmpeg
+
+# Liquidsoap expone puerto telnet o comandos opcionales, pero aquí usamos pipe
+CMD ["liquidsoap", "/app/app_ffmpeg/radio.liq"]

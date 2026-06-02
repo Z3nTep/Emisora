@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Now Playing - Overlay</title>
+<style>
+  /* ============================================
+     Google Font: MedievalSharp (medieval/fantasy)
+     ============================================ */
+  @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&display=swap');
+
+  /* ============================================
+     Reset y fondo transparente para OBS
+     ============================================ */
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: transparent;
+    overflow: hidden;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    width: 100vw;
+    height: 100vh;
+    font-family: 'MedievalSharp', cursive;
+  }
+
+  /* ============================================
+     Widget principal
+     ============================================ */
+  .widget {
+    width: 420px;
+    padding: 18px 24px 20px;
+    position: relative;
+    /* Pergamino */
+    background:
+      radial-gradient(ellipse at 50% 0%, rgba(232, 210, 170, 0.95) 0%, rgba(200, 170, 120, 0.92) 100%);
+    border-radius: 6px;
+    box-shadow:
+      0 4px 20px rgba(0, 0, 0, 0.5),
+      inset 0 0 60px rgba(120, 80, 30, 0.15);
+    /* Borde quemado */
+    border: 2px solid rgba(100, 70, 30, 0.5);
+    overflow: hidden;
+  }
+
+  /* Textura de pergamino (ruido sutil) */
+  .widget::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 3px,
+        rgba(120, 80, 30, 0.03) 3px,
+        rgba(120, 80, 30, 0.03) 4px
+      );
+    pointer-events: none;
+    border-radius: 6px;
+  }
+
+  /* Sombra de bordes quemados */
+  .widget::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 6px;
+    box-shadow: inset 0 0 30px rgba(80, 50, 10, 0.25);
+    pointer-events: none;
+  }
+
+  /* ============================================
+     Título: NOW PLAYING 🎧
+     ============================================ */
+  .title {
+    font-size: 24px;
+    font-weight: normal;
+    color: #3a2810;
+    text-align: center;
+    margin-bottom: 10px;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.15);
+    position: relative;
+    z-index: 1;
+    /* Subrayado decorativo */
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(100, 70, 30, 0.3);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .title .icon {
+    font-style: normal;
+    font-size: 22px;
+  }
+
+  /* ============================================
+     Info de canción
+     ============================================ */
+  .song-info {
+    text-align: center;
+    margin-bottom: 14px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .song-info .label {
+    font-size: 16px;
+    color: #4a3520;
+    line-height: 1.5;
+    text-shadow: 0 1px 1px rgba(255, 240, 200, 0.5);
+  }
+
+  .song-info .value {
+    color: #2a1808;
+    font-weight: normal;
+  }
+
+  /* ============================================
+     Barra de progreso estilo medieval/espada
+     ============================================ */
+  .progress-container {
+    position: relative;
+    z-index: 1;
+    height: 28px;
+    margin-top: 4px;
+  }
+
+  /* Marco exterior metálico */
+  .progress-frame {
+    position: relative;
+    width: 100%;
+    height: 22px;
+    margin-top: 3px;
+    /* Bordes metálicos */
+    background: linear-gradient(180deg,
+      #5a5a5a 0%,
+      #3a3a3a 15%,
+      #2a2a2a 50%,
+      #3a3a3a 85%,
+      #4a4a4a 100%
+    );
+    border-radius: 11px;
+    border: 1px solid #1a1a1a;
+    box-shadow:
+      0 2px 6px rgba(0, 0, 0, 0.5),
+      inset 0 1px 1px rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+    /* Padding interno para el canal */
+    padding: 3px 4px;
+  }
+
+  /* Canal interior (la pista) */
+  .progress-track {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(180deg,
+      #1a1008 0%,
+      #2a1a0c 50%,
+      #1a1008 100%
+    );
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  /* Barra de progreso (relleno) */
+  .progress-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(180deg,
+      #f0a830 0%,
+      #e88820 25%,
+      #d06010 50%,
+      #c04808 75%,
+      #a03808 100%
+    );
+    border-radius: 8px;
+    transition: width 0.5s ease;
+  }
+
+  /* Brillo dorado animado que recorre la barra */
+  .progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -60%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(255, 240, 180, 0.3) 40%,
+      rgba(255, 220, 120, 0.6) 50%,
+      rgba(255, 240, 180, 0.3) 60%,
+      transparent 100%
+    );
+    animation: shimmer 3s ease-in-out infinite;
+  }
+
+  @keyframes shimmer {
+    0%   { left: -60%; }
+    100% { left: 110%; }
+  }
+
+  /* Brillo superior de la barra */
+  .progress-fill::before {
+    content: '';
+    position: absolute;
+    top: 1px;
+    left: 4px;
+    right: 4px;
+    height: 40%;
+    background: linear-gradient(180deg,
+      rgba(255, 230, 150, 0.5) 0%,
+      transparent 100%
+    );
+    border-radius: 4px;
+  }
+
+  /* Punto de luz en la posición actual */
+  .progress-glow {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: radial-gradient(circle,
+      rgba(255, 240, 180, 0.9) 0%,
+      rgba(255, 200, 80, 0.6) 40%,
+      transparent 70%
+    );
+    filter: blur(2px);
+    transition: left 0.5s ease;
+    pointer-events: none;
+  }
+
+  /* Puntas decorativas (flechas metálicas en los extremos) */
+  .progress-cap {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14px;
+    height: 18px;
+    z-index: 2;
+  }
+
+  .progress-cap.left {
+    left: -4px;
+    background: linear-gradient(90deg, #6a6a6a, #4a4a4a);
+    clip-path: polygon(0% 50%, 60% 0%, 100% 0%, 100% 100%, 60% 100%);
+  }
+
+  .progress-cap.right {
+    right: -4px;
+    background: linear-gradient(270deg, #6a6a6a, #4a4a4a);
+    clip-path: polygon(0% 0%, 40% 0%, 100% 50%, 40% 100%, 0% 100%);
+  }
+
+  /* ============================================
+     Tiempo
+     ============================================ */
+  .time-display {
+    text-align: center;
+    font-size: 12px;
+    color: #6a5030;
+    margin-top: 6px;
+    position: relative;
+    z-index: 1;
+    letter-spacing: 1px;
+  }
+
+  /* ============================================
+     Animación de entrada al cambiar canción
+     ============================================ */
+  .song-info.changing {
+    animation: fadeSwap 0.6s ease;
+  }
+
+  @keyframes fadeSwap {
+    0%   { opacity: 0; transform: translateY(-6px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<div class="widget">
+  <div class="title">
+    Now Playing <span class="icon">🎧</span>
+  </div>
+
+  <div class="song-info" id="songInfo">
+    <div class="label">
+      Album: <span class="value" id="albumName">—</span>
+    </div>
+    <div class="label">
+      Canción: <span class="value" id="songName">—</span>
+    </div>
+  </div>
+
+  <div class="progress-container">
+    <div class="progress-frame">
+      <div class="progress-cap left"></div>
+      <div class="progress-cap right"></div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progressFill"></div>
+        <div class="progress-glow" id="progressGlow"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="time-display" id="timeDisplay">0:00 / 0:00</div>
+</div>
+
+<script>
+  // ============================================
+  // Lectura de now_playing.json
+  // ============================================
+  const albumEl    = document.getElementById('albumName');
+  const songEl     = document.getElementById('songName');
+  const fillEl     = document.getElementById('progressFill');
+  const glowEl     = document.getElementById('progressGlow');
+  const timeEl     = document.getElementById('timeDisplay');
+  const infoEl     = document.getElementById('songInfo');
+
+  let lastSong = '';
+
+  async function update() {
+    try {
+      const res = await fetch('now_playing.json?t=' + Date.now());
+      if (!res.ok) return;
+      const data = await res.json();
+
+      // Detectar cambio de canción para animación
+      const currentSong = data.song + data.album;
+      if (currentSong !== lastSong && lastSong !== '') {
+        infoEl.classList.remove('changing');
+        // Forzar reflow para reiniciar animación
+        void infoEl.offsetWidth;
+        infoEl.classList.add('changing');
+      }
+      lastSong = currentSong;
+
+      // Actualizar textos
+      albumEl.textContent  = data.album  || '—';
+      songEl.textContent   = data.song   || '—';
+      timeEl.textContent   = (data.time_current || '0:00') + ' / ' + (data.time_total || '0:00');
+
+      // Actualizar barra de progreso
+      const pct = Math.min(100, Math.max(0, data.progress || 0));
+      fillEl.style.width = pct + '%';
+      glowEl.style.left  = pct + '%';
+
+    } catch (e) {
+      // JSON aún no existe o error de lectura, no hacer nada
+    }
+  }
+
+  // Actualizar cada segundo
+  setInterval(update, 1000);
+  update();
+</script>
+
+</body>
+</html>
