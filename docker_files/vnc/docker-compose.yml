@@ -102,7 +102,5 @@ services:
 networks:
   stream-offnet:
     driver: bridge
-    driver_opts:
-      com.docker.network.bridge.enable_ip_masquerade: 'false' # Para poder acceder al VNC estando en la offnet
   stream-onnet:
     driver: bridge

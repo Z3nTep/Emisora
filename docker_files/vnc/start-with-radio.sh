@@ -73,7 +73,7 @@ if not os.path.exists(path):
     with open(path, "w") as f: f.write("[OBSWebSocket]\n")
 with open(path, "r") as f: content = f.read()
 if "[OBSWebSocket]" not in content: content += "\n[OBSWebSocket]\n"
-for k, v in [("ServerEnabled", "true"), ("ServerPort", "4455"), ("AuthRequired", "true")]:
+for k, v in [("ServerEnabled", "true"), ("ServerPort", "4455"), ("AuthRequired", "false")]:
     pat_lower = re.compile(rf"\n{k.lower()}\s*=.*", re.IGNORECASE)
     pat_exact = re.compile(rf"\n{k}=.*")
     if pat_exact.search(content):
@@ -89,7 +89,7 @@ jpath = os.path.expanduser("~/.config/obs-studio/plugin_config/obs-websocket/con
 if os.path.exists(jpath):
     try:
         with open(jpath, "r") as f: data = json.load(f)
-        data["auth_required"] = True
+        data["auth_required"] = False
         data["server_enabled"] = True
         data["server_port"] = 4455
         with open(jpath, "w") as f: json.dump(data, f, indent=2)
@@ -147,6 +147,19 @@ if os.path.exists(jpath):
       export PATH=$HOME/bin:$PATH
 
       if [ "$AUTO_STREAM" = "true" ]; then
+        echo "⏳ Esperando a que Restreamer (transmisor:1935) esté disponible..."
+        RETRY=0
+        MAX_RETRIES=60
+        while ! timeout 2 bash -c 'echo > /dev/tcp/transmisor/1935' 2>/dev/null; do
+          RETRY=$((RETRY + 1))
+          if [ $RETRY -ge $MAX_RETRIES ]; then
+            echo "❌ Restreamer no responde tras $MAX_RETRIES intentos. Iniciando OBS sin streaming."
+            obs $OPTS
+            exit 0
+          fi
+          sleep 2
+        done
+        echo "✅ Restreamer disponible. Iniciando OBS con streaming automático."
         obs $OPTS --startstreaming
       else
         obs $OPTS
